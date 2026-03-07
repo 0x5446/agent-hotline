@@ -147,8 +147,8 @@ def _make_title(cwd: str, message: str = "") -> str:
     project = basename(cwd) if cwd else "unknown"
     if not message:
         return project
-    snippet = message[:5].rstrip()
-    ellipsis = "..." if len(message) > 5 else ""
+    snippet = message[:10].rstrip()
+    ellipsis = "..." if len(message) > 10 else ""
     return f"{project} | {snippet}{ellipsis}"
 
 

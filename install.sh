@@ -62,6 +62,7 @@ check_prereqs() {
 clone_or_update() {
   if [ -d "$INSTALL_DIR/.git" ]; then
     info "Updating existing installation..."
+    git -C "$INSTALL_DIR" reset --hard HEAD
     git -C "$INSTALL_DIR" pull --ff-only
   else
     info "Cloning WalkCode..."

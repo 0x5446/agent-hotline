@@ -232,6 +232,7 @@ def cmd_upgrade(_args):
             sys.exit(1)
 
     print(f"Upgrading WalkCode in {install_dir}...")
+    run("git reset --hard HEAD")
     run("git pull --ff-only")
     run("uv sync")
     run("uv tool install -e . --force")
