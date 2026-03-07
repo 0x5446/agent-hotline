@@ -67,18 +67,7 @@ When you start an agent from chat, WalkCode launches Claude Code with `--permiss
 | Tools in `permissions.allow` | Auto-approved | Auto-approved |
 | Tools NOT in `permissions.allow` | **Auto-denied (safe)** | **Auto-approved (unsafe)** |
 
-This means remote-started sessions respect your `~/.claude/settings.json` permission rules — tools you've allowed (like `Bash(*)`, `Read(*)`, `Edit(*)`) work automatically, while anything else is denied rather than left hanging for approval that will never come.
-
-To customize which tools are allowed, edit your `~/.claude/settings.json`:
-
-```json
-{
-  "permissions": {
-    "allow": ["Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "Glob(*)", "Grep(*)"],
-    "deny": ["Bash(rm -rf /*)"]
-  }
-}
-```
+This means remote-started sessions respect whatever permissions you have configured in `~/.claude/settings.json` — tools in your `allow` list work automatically, while anything else is denied rather than left hanging for approval that will never come. The permission rules are entirely yours to define; WalkCode does not add or modify them.
 
 ## Quick Start
 

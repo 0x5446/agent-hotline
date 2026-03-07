@@ -71,18 +71,7 @@ WalkCode 的核心设计：**1 个聊天话题 = 1 个 tmux 会话 = 1 个 Codin
 | `permissions.allow` 中的工具 | 自动通过 | 自动通过 |
 | **不在** `permissions.allow` 中的工具 | **自动拒绝（安全）** | **自动通过（危险）** |
 
-远程启动的会话会遵守 `~/.claude/settings.json` 中的权限规则 —— 你允许的工具（如 `Bash(*)`、`Read(*)`、`Edit(*)`）自动通过，其余工具会被自动拒绝，不会卡住等待一个永远不会来的审批。
-
-要自定义允许的工具列表，编辑 `~/.claude/settings.json`：
-
-```json
-{
-  "permissions": {
-    "allow": ["Bash(*)", "Read(*)", "Write(*)", "Edit(*)", "Glob(*)", "Grep(*)"],
-    "deny": ["Bash(rm -rf /*)"]
-  }
-}
-```
+远程启动的会话会遵守你在 `~/.claude/settings.json` 中配置的权限规则 —— `allow` 列表中的工具自动通过，其余工具自动拒绝，不会卡住等待一个永远不会来的审批。权限规则完全由你自己定义，WalkCode 不会添加或修改它们。
 
 ## 快速开始
 
