@@ -16,9 +16,9 @@ class Config:
     @classmethod
     def load(cls) -> "Config":
         """Load config from .env file and environment variables."""
-        env_file = Path.home() / ".walkcode" / ".env"
+        env_file = Path.cwd() / ".env"
         if not env_file.exists():
-            env_file = Path.cwd() / ".env"
+            env_file = Path.home() / ".walkcode" / ".env"
         if env_file.exists():
             for line in env_file.read_text().splitlines():
                 line = line.strip()
