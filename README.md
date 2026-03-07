@@ -36,9 +36,52 @@ This is **Yap Coding** — you talk, it codes. No keyboard, no screen, no desk. 
 - **Multi-session** — Multiple agents, one instance, auto-routing
 - **Session persistence** — Survives server restarts
 
+## Architecture: The 1:1:1 Design
+
+WalkCode's core design: **1 IM thread = 1 tmux session = 1 coding agent instance**.
+
+```
+Feishu Thread A  <──1:1──>  tmux: claude-myapp-12345  <──1:1──>  Claude Code (myapp)
+Feishu Thread B  <──1:1──>  tmux: claude-api-67890    <──1:1──>  Claude Code (api)
+```
+
+**Why this matters:**
+
+- **Zero crosstalk** — Reply in a thread, it always reaches the right agent. No manual routing, no confusion.
+- **Natural context** — Each thread is a complete conversation history with one agent. Scroll up to see every permission request, every output, every reply.
+- **Stateless routing** — WalkCode maps IM threads to tmux sessions. Reply to any message in a thread and it goes to the same terminal. No need to remember session IDs.
+- **Survives restarts** — Session mappings persist to disk. Restart the server, your threads still work.
+
+### How Remote Start Works
+
+You can start an agent directly from your IM — no terminal needed:
+
+1. **You send** a message in the IM chat (e.g., "fix the login bug in myapp")
+2. **WalkCode creates** a tmux session: `tmux new-session -d -s walkcode-1741234567 "claude 'fix the login bug in myapp'"`
+3. **WalkCode replies** in a thread: "Started Claude Code. `tmux attach -t walkcode-1741234567`"
+4. **WalkCode remembers** the link: `tmux session name → IM message ID` (stored in `_pending_roots`)
+5. **When Claude's hooks fire** for the first time, the hook POST includes the tmux session name
+6. **WalkCode matches** the tmux name in `_pending_roots`, finds the original IM message, and links this agent session to that thread
+7. **From now on**, all hook events from this agent reply to the same thread — the 1:1:1 link is established
+
+This means you can literally start a coding task from your phone while walking, and the entire session lives in one clean thread.
+
 ## Quick Start
 
-### 1. Create a Feishu App
+### One-Click Install
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/0x5446/walkcode/main/install.sh | bash
+```
+
+This will: install prerequisites (tmux, uv) → clone repo → install dependencies → create `.env` template → add shell wrapper → install Claude Code hooks.
+
+### Manual Install
+
+<details>
+<summary>Step-by-step instructions</summary>
+
+#### 1. Create a Feishu App
 
 1. Go to [Feishu Open Platform](https://open.feishu.cn/app) and create an enterprise app
 2. **Add capability** > Bot
@@ -49,21 +92,21 @@ This is **Yap Coding** — you talk, it codes. No keyboard, no screen, no desk. 
 4. **Events & Callbacks** > Long connection mode > Add event `im.message.receive_v1`
 5. **Version Management** > Create version > Publish
 
-### 2. Install
+#### 2. Install
 
 ```bash
 brew install tmux
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
-git clone https://github.com/0x5446/agent-hotline.git
-cd agent-hotline
+git clone https://github.com/0x5446/walkcode.git
+cd walkcode
 uv sync
 cp .env.example .env
 ```
 
 Edit `.env` with your Feishu App ID, Secret, and Verification Token.
 
-### 3. Get Your open_id
+#### 3. Get Your open_id
 
 ```bash
 uv run walkcode serve
@@ -71,7 +114,7 @@ uv run walkcode serve
 
 Send any message to your bot in Feishu, check logs for `open_id`, add to `FEISHU_RECEIVE_ID` in `.env`, restart.
 
-### 4. Add Shell Wrapper
+#### 4. Add Shell Wrapper
 
 Add to `~/.zshrc` (or `~/.bashrc`):
 
@@ -88,11 +131,13 @@ claude() {
 
 Then: `source ~/.zshrc`
 
-### 5. Install Hooks
+#### 5. Install Hooks
 
 ```bash
 uv run walkcode install-hooks
 ```
+
+</details>
 
 That's it. Type `claude` and go for a walk.
 
@@ -105,14 +150,6 @@ That's it. Type `claude` and go for a walk.
 5. You tap a button or reply with text — real-time via WebSocket
 6. `tmux send-keys` injects your response — no GUI required
 
-### Remote Start
-
-Send a message in your IM chat to start a new agent session remotely:
-
-1. WalkCode creates a tmux session with `claude "<your message>"`
-2. Replies in thread confirming session started
-3. Subsequent hooks auto-link to the same thread
-
 ## Usage
 
 | Scenario | What You See | What You Do |
@@ -120,7 +157,7 @@ Send a message in your IM chat to start a new agent session remotely:
 | Permission prompt | Card with buttons | Tap **Allow** / **Deny** / **Always** |
 | Waiting for input | Text in thread | Reply with text |
 | Task complete | Text in thread | Reply to continue, or ignore |
-| Remote start | Send a message | Agent starts in new tmux session |
+| Remote start | Send a message in chat | Agent starts in new tmux session |
 
 ## CLI
 
@@ -176,8 +213,8 @@ WalkCode's goal: **connect any coding agent to any IM.**
 
 ## Community
 
-- [GitHub Issues](https://github.com/0x5446/agent-hotline/issues) — Bug reports & feature requests
-- [GitHub Discussions](https://github.com/0x5446/agent-hotline/discussions) — Q&A & ideas
+- [GitHub Issues](https://github.com/0x5446/walkcode/issues) — Bug reports & feature requests
+- [GitHub Discussions](https://github.com/0x5446/walkcode/discussions) — Q&A & ideas
 
 <!-- TODO: Add Discord/Telegram community link -->
 
