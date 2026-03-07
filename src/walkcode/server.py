@@ -2,6 +2,7 @@
 
 import json
 import logging
+import os
 import random
 import re
 import subprocess
@@ -294,6 +295,7 @@ def _on_card_action(data: P2CardActionTrigger) -> P2CardActionTriggerResponse:
 def _start_claude(prompt: str, message_id: str):
     """Start a Claude Code instance in a tmux session, triggered from Feishu."""
     cwd = config.default_cwd
+    os.makedirs(cwd, exist_ok=True)
     tmux_name = f"walkcode-{int(time.time())}"
     escaped = prompt.replace("'", "'\\''")
     cmd = f"cd '{cwd}' && claude --permission-mode dontAsk '{escaped}'"

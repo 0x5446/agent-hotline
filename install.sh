@@ -78,6 +78,9 @@ install_package() {
 
   info "Installing walkcode CLI..."
   uv tool install -e "$INSTALL_DIR" --force 2>/dev/null || uv tool install -e "$INSTALL_DIR"
+
+  # Ensure remote-start workspace directory exists
+  mkdir -p "$HOME/.walkcode/workspace"
 }
 
 # --- Setup .env ---
