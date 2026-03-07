@@ -4,9 +4,9 @@
 
 > **Code is cheap. Show me your talk.**
 
-**智能体写代码，你散步。**
+**Coding Agent 写代码，你散步。**
 
-WalkCode 让 AI 编程智能体在需要帮助时给你发消息，你用手机就能审批、回复、纠正方向。不用守在电脑前，也能掌控全局。
+WalkCode 让 Coding Agent 在需要帮助时给你发消息，你用手机就能审批、回复、纠正方向。不用守在电脑前，也能掌控全局。
 
 **边走边 Code，口喷编程。这就是 WalkCode。**
 
@@ -17,10 +17,10 @@ Coding Agent (tmux) ──Hook──> WalkCode ──API──> 聊天（话题 
 
 ## 为什么要用 WalkCode？
 
-你离开了电脑。你的 AI 智能体弹出一个权限确认，卡住了。没有 WalkCode，它等你回来。有了 WalkCode，手机震一下，你点"允许"，它接着干。
+你离开了电脑。你的 Coding Agent 弹出一个权限确认，卡住了。没有 WalkCode，它等你回来。有了 WalkCode，手机震一下，你点"允许"，它接着干。
 
-- **别让智能体等你** —— 随时随地审批和回复
-- **每个会话独立话题** —— 在话题中回复，必定送达正确的智能体
+- **别让 Coding Agent 等你** —— 随时随地审批和回复
+- **每个会话独立话题** —— 在话题中回复，必定送达正确的 Coding Agent
 - **锁屏也能用** —— 基于 tmux，不依赖 GUI
 
 工程师也有自己的移动互联网浪潮。
@@ -30,16 +30,16 @@ Coding Agent (tmux) ──Hook──> WalkCode ──API──> 聊天（话题 
 **核心：**
 - **一键授权** —— 权限确认以交互卡片展示，支持 允许 / 拒绝 / 始终允许
 - **文字回复** —— 在话题中回复文字，直接输入到对应终端
-- **远程启动** —— 在聊天中发条消息，就能远程启动一个新的编程智能体
+- **远程启动** —— 在聊天中发条消息，就能远程启动一个新的 Coding Agent
 
 **其他：**
-- **多会话** —— 多个智能体，一个实例，自动路由
+- **多会话** —— 多个 Coding Agent，一个实例，自动路由
 - **会话持久化** —— 服务重启后自动恢复
 - **表情回执** —— 随机表情回应确认送达
 
 ## 架构设计：1:1:1 映射
 
-WalkCode 的核心设计：**1 个聊天话题 = 1 个 tmux 会话 = 1 个智能体进程。** 零串扰，上下文天然隔离，消息路由无状态。
+WalkCode 的核心设计：**1 个聊天话题 = 1 个 tmux 会话 = 1 个 Coding Agent 进程。** 零串扰，上下文天然隔离，消息路由无状态。
 
 ```
 飞书话题 A  <──1:1──>  tmux: claude-myapp-12345  <──1:1──>  Claude Code (myapp)
@@ -48,14 +48,14 @@ WalkCode 的核心设计：**1 个聊天话题 = 1 个 tmux 会话 = 1 个智能
 
 ### 远程启动的工作原理
 
-你可以直接从聊天启动智能体 —— 不需要打开终端：
+你可以直接从聊天启动 Coding Agent —— 不需要打开终端：
 
 1. 你在聊天中发送一条消息（如"修复 myapp 的登录 bug"）
 2. WalkCode 创建 tmux 会话：`claude "修复 myapp 的登录 bug"`
 3. WalkCode 在话题中回复确认已启动
 4. WalkCode 记住关联关系：`tmux 会话名 → 聊天消息 ID`（存储在 `_pending_roots` 中）
-5. 当智能体的 hooks 首次触发时，WalkCode 匹配 tmux 名称，将此会话关联到该话题
-6. 此后，该智能体的所有事件都回复到同一话题 —— 1:1:1 关联建立完成
+5. 当 Coding Agent 的 hooks 首次触发时，WalkCode 匹配 tmux 名称，将此会话关联到该话题
+6. 此后，该 Coding Agent 的所有事件都回复到同一话题 —— 1:1:1 关联建立完成
 
 ## 快速开始
 
@@ -142,8 +142,8 @@ uv run walkcode install-hooks
 
 ## 工作原理
 
-1. Shell wrapper 将智能体启动在 tmux 会话中
-2. 智能体 [Hooks](https://docs.anthropic.com/en/docs/claude-code/hooks) 在任务完成 / 需要权限 / 等待输入时触发
+1. Shell wrapper 将 Coding Agent 启动在 tmux 会话中
+2. Coding Agent [Hooks](https://docs.anthropic.com/en/docs/claude-code/hooks) 在任务完成 / 需要权限 / 等待输入时触发
 3. `walkcode hook` 检测当前 tmux 会话名并 POST 到本地服务器
 4. WalkCode 在聊天中创建**话题消息**（项目名作为标题，内容作为首条回复）
 5. 你点击按钮或回复文字 —— 通过 WebSocket 实时送达
@@ -156,7 +156,7 @@ uv run walkcode install-hooks
 | 权限确认 | 带按钮的交互卡片 | 点击 **允许** / **拒绝** / **始终允许** |
 | 等待输入 | 话题中的文字消息 | 回复文字 |
 | 任务完成 | 话题中的文字消息 | 回复以继续，或忽略 |
-| 远程启动 | 在聊天中发一条消息 | 智能体在新 tmux 会话中启动 |
+| 远程启动 | 在聊天中发一条消息 | Coding Agent 在新 tmux 会话中启动 |
 
 ## 命令行
 
@@ -185,11 +185,11 @@ walkcode test-inject <tmux-session> "hi"  # 测试注入
 
 ## 路线图
 
-WalkCode 的目标：**连接任意编程智能体到任意聊天平台。**
+WalkCode 的目标：**连接任意 Coding Agent 到任意聊天平台。**
 
-### 编程智能体
+### Coding Agent
 
-| 智能体 | 状态 |
+| Coding Agent | 状态 |
 |--------|------|
 | [Claude Code](https://docs.anthropic.com/en/docs/claude-code) | 已支持 |
 | [Codex CLI](https://github.com/openai/codex) | 计划中 |
