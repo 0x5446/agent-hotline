@@ -294,6 +294,7 @@ WalkCode's goal: **connect any coding agent to any chat platform.**
 | Feature | Status |
 |---------|--------|
 | Multi-modal messages (image, rich text, forwarded messages) | Planned |
+| Slash command reply and option selection | Planned |
 
 ### Chat Platforms
 
