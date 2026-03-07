@@ -74,6 +74,9 @@ install_package() {
   info "Installing dependencies..."
   cd "$INSTALL_DIR"
   uv sync
+
+  info "Installing walkcode CLI..."
+  uv tool install -e "$INSTALL_DIR" --force 2>/dev/null || uv tool install -e "$INSTALL_DIR"
 }
 
 # --- Setup .env ---
@@ -169,6 +172,12 @@ main() {
   install_wrapper
   configure_tmux
   install_hooks
+
+  # Restart daemon if already running (upgrade scenario)
+  if command -v walkcode &>/dev/null && walkcode status &>/dev/null; then
+    info "Restarting WalkCode daemon..."
+    walkcode restart
+  fi
 
   echo ""
   info "Installation complete!"
