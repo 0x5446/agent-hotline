@@ -78,10 +78,10 @@ curl -fsSL https://raw.githubusercontent.com/0x5446/walkcode/main/install.sh | b
 ### 一键卸载
 
 ```bash
-bash ~/walkcode/uninstall.sh
+curl -fsSL https://raw.githubusercontent.com/0x5446/walkcode/main/uninstall.sh | bash
 ```
 
-清理守护进程、Shell Wrapper、tmux 配置、Claude Code Hooks、运行时数据和安装目录。运行前可先[查看脚本内容](uninstall.sh)。
+清理守护进程、Shell Wrapper、tmux 配置、Claude Code Hooks、运行时数据和安装目录。如果自定义了安装路径，加 `WALKCODE_DIR=/your/path` 前缀即可。运行前可先[查看脚本内容](uninstall.sh)。
 
 ### 手动安装
 
