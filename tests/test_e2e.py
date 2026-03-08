@@ -28,9 +28,6 @@ class _Base(unittest.TestCase):
 
         server.session_store = SessionStore(self.state_path)
         server.session_store.load()
-        server._pending_roots.clear()
-        server._pending_msg_to_tty.clear()
-        server._pending_reply_ids.clear()
         self.client = TestClient(server.app)
 
         self.started_claudes = []  # [(prompt, message_id)]
@@ -491,8 +488,8 @@ class PersistenceTests(_Base):
 
 class FeishuInitiatedTests(_Base):
     def test_pending_root_links_to_feishu_thread(self):
-        """When _pending_roots has a tmux name, hook should reuse that root."""
-        server._pending_roots["walkcode-12345"] = "feishu-msg-100"
+        """When pending entry exists, hook should reuse that root."""
+        server.session_store.add_pending("walkcode-12345", "feishu-msg-100")
 
         resp = self._post_hook(
             session_id="s1", tty="walkcode-12345",
@@ -515,13 +512,13 @@ class FeishuInitiatedTests(_Base):
         self.assertIsNotNone(session)
         self.assertEqual(session.root_msg_id, "feishu-msg-100")
 
-        # pending_roots should be consumed
-        self.assertNotIn("walkcode-12345", server._pending_roots)
+        # pending should be consumed
+        root, _ = server.session_store.pop_pending("walkcode-12345")
+        self.assertIsNone(root)
 
     def test_pending_root_edits_launch_reply_with_session_id(self):
         """When pending root matches, the launch reply should be updated with session_id."""
-        server._pending_roots["walkcode-12345"] = "feishu-msg-100"
-        server._pending_reply_ids["walkcode-12345"] = "reply-launch-1"
+        server.session_store.add_pending("walkcode-12345", "feishu-msg-100", reply_id="reply-launch-1")
 
         self._post_hook(
             session_id="s1", tty="walkcode-12345",
@@ -535,8 +532,8 @@ class FeishuInitiatedTests(_Base):
         self.assertIn("walkcode-12345", text)
 
     def test_pending_root_not_consumed_by_wrong_tty(self):
-        """pending_roots entry should only match by tmux session name."""
-        server._pending_roots["walkcode-12345"] = "feishu-msg-100"
+        """pending entry should only match by tmux session name."""
+        server.session_store.add_pending("walkcode-12345", "feishu-msg-100")
 
         resp = self._post_hook(
             session_id="s1", tty="walkcode-other",
@@ -546,11 +543,12 @@ class FeishuInitiatedTests(_Base):
         self.assertTrue(body["ok"])
         # Should create a new root (not reuse pending)
         self.assertEqual(len(self.sent), 1)
-        self.assertIn("walkcode-12345", server._pending_roots)
+        root, _ = server.session_store.pop_pending("walkcode-12345")
+        self.assertEqual(root, "feishu-msg-100")
 
     def test_subsequent_hook_after_pending_replies_to_thread(self):
-        """After pending_roots linking, subsequent hooks reply to same thread."""
-        server._pending_roots["walkcode-12345"] = "feishu-msg-100"
+        """After pending linking, subsequent hooks reply to same thread."""
+        server.session_store.add_pending("walkcode-12345", "feishu-msg-100")
 
         # First hook: consumes pending root
         self._post_hook(

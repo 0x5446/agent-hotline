@@ -43,16 +43,21 @@ class SessionStore:
         self._lock = threading.RLock()
         self._sessions: dict[str, Session] = {}
         self._root_to_session: dict[str, str] = {}
+        # Pending Feishu-initiated sessions (not yet linked via hook)
+        self._pending: dict[str, dict] = {}  # tmux_name → {"root_msg_id": str, "reply_id": str|None}
+        self._pending_msg_to_tty: dict[str, str] = {}  # root_msg_id → tmux_name
 
     def load(self):
         with self._lock:
             self._sessions = {}
+            self._pending = {}
             if self.path.exists():
                 try:
                     payload = json.loads(self.path.read_text())
                 except (OSError, json.JSONDecodeError) as e:
                     logger.warning("Failed to load state file %s: %s", self.path, e)
                     self._root_to_session = {}
+                    self._pending_msg_to_tty = {}
                     return
 
                 raw_sessions = payload.get("sessions", {})
@@ -65,7 +70,17 @@ class SessionStore:
                         except (TypeError, ValueError) as e:
                             logger.warning("Skipping invalid session %s: %s", session_id, e)
 
+                raw_pending = payload.get("pending", {})
+                if isinstance(raw_pending, dict):
+                    for tmux_name, entry in raw_pending.items():
+                        if isinstance(entry, dict) and entry.get("root_msg_id"):
+                            self._pending[str(tmux_name)] = {
+                                "root_msg_id": str(entry["root_msg_id"]),
+                                "reply_id": str(entry["reply_id"]) if entry.get("reply_id") else None,
+                            }
+
             self._rebuild_index_locked()
+            self._rebuild_pending_index_locked()
             self._save_locked()
 
     def count(self) -> int:
@@ -138,13 +153,20 @@ class SessionStore:
             if session.root_msg_id
         }
 
+    def _rebuild_pending_index_locked(self):
+        self._pending_msg_to_tty = {
+            entry["root_msg_id"]: tmux_name
+            for tmux_name, entry in self._pending.items()
+        }
+
     def _save_locked(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         payload = {
             "sessions": {
                 session_id: session.to_dict()
                 for session_id, session in self._sessions.items()
-            }
+            },
+            "pending": dict(self._pending),
         }
         with tempfile.NamedTemporaryFile(
             "w",
@@ -158,3 +180,31 @@ class SessionStore:
             tmp.write("\n")
             tmp_path = Path(tmp.name)
         tmp_path.replace(self.path)
+
+    # --- Pending Feishu-initiated session helpers ---
+
+    def add_pending(self, tmux_name: str, root_msg_id: str, reply_id: str | None = None):
+        with self._lock:
+            self._pending[tmux_name] = {"root_msg_id": root_msg_id, "reply_id": reply_id}
+            self._pending_msg_to_tty[root_msg_id] = tmux_name
+            self._save_locked()
+
+    def update_pending_reply(self, tmux_name: str, reply_id: str):
+        with self._lock:
+            entry = self._pending.get(tmux_name)
+            if entry:
+                entry["reply_id"] = reply_id
+                self._save_locked()
+
+    def pop_pending(self, tmux_name: str) -> tuple[str | None, str | None]:
+        with self._lock:
+            entry = self._pending.pop(tmux_name, None)
+            if not entry:
+                return None, None
+            self._pending_msg_to_tty.pop(entry["root_msg_id"], None)
+            self._save_locked()
+            return entry["root_msg_id"], entry.get("reply_id")
+
+    def resolve_pending_tty(self, msg_id: str) -> str | None:
+        with self._lock:
+            return self._pending_msg_to_tty.get(msg_id)

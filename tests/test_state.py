@@ -113,6 +113,61 @@ class SessionStoreTests(unittest.TestCase):
         ids = {sid for sid, _ in items}
         self.assertEqual(ids, {"s1", "s2"})
 
+    # --- Pending tests ---
+
+    def test_add_and_pop_pending(self):
+        store = SessionStore(self.state_path)
+        store.load()
+        store.add_pending("walkcode-1", "root-msg-1", reply_id="reply-1")
+
+        root, reply = store.pop_pending("walkcode-1")
+        self.assertEqual(root, "root-msg-1")
+        self.assertEqual(reply, "reply-1")
+
+        # Should be consumed
+        root2, reply2 = store.pop_pending("walkcode-1")
+        self.assertIsNone(root2)
+        self.assertIsNone(reply2)
+
+    def test_resolve_pending_tty(self):
+        store = SessionStore(self.state_path)
+        store.load()
+        store.add_pending("walkcode-1", "root-msg-1")
+
+        self.assertEqual(store.resolve_pending_tty("root-msg-1"), "walkcode-1")
+        self.assertIsNone(store.resolve_pending_tty("unknown"))
+
+    def test_update_pending_reply(self):
+        store = SessionStore(self.state_path)
+        store.load()
+        store.add_pending("walkcode-1", "root-msg-1")
+        store.update_pending_reply("walkcode-1", "reply-99")
+
+        root, reply = store.pop_pending("walkcode-1")
+        self.assertEqual(root, "root-msg-1")
+        self.assertEqual(reply, "reply-99")
+
+    def test_pending_persists_across_reload(self):
+        store = SessionStore(self.state_path)
+        store.load()
+        store.add_pending("walkcode-1", "root-msg-1", reply_id="reply-1")
+
+        reloaded = SessionStore(self.state_path)
+        reloaded.load()
+
+        self.assertEqual(reloaded.resolve_pending_tty("root-msg-1"), "walkcode-1")
+        root, reply = reloaded.pop_pending("walkcode-1")
+        self.assertEqual(root, "root-msg-1")
+        self.assertEqual(reply, "reply-1")
+
+    def test_pop_pending_clears_reverse_index(self):
+        store = SessionStore(self.state_path)
+        store.load()
+        store.add_pending("walkcode-1", "root-msg-1")
+
+        store.pop_pending("walkcode-1")
+        self.assertIsNone(store.resolve_pending_tty("root-msg-1"))
+
 
 if __name__ == "__main__":
     unittest.main()

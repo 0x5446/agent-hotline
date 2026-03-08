@@ -47,9 +47,6 @@ session_store: SessionStore = None  # type: ignore
 _IDLE_TIMEOUT = 7200  # 2h — kill tmux sessions idle longer than this
 _REAPER_INTERVAL = 600  # 10min — how often the idle reaper runs
 _STALE_SESSION_MESSAGE = "⚠️ tmux 会话已失效，请等待 Claude 的下一条通知刷新会话"
-_pending_roots: dict[str, str] = {}  # tmux_session_name → root_msg_id
-_pending_msg_to_tty: dict[str, str] = {}  # root_msg_id → tmux_session_name
-_pending_reply_ids: dict[str, str] = {}  # tmux_session_name → reply_message_id
 
 
 def _resolve_session_id(msg) -> str | None:
@@ -314,11 +311,10 @@ def _start_claude(prompt: str, message_id: str):
         _reply(message_id, f"⚠️ 启动失败: {e}", reply_in_thread=True)
         return
 
-    _pending_roots[tmux_name] = message_id
-    _pending_msg_to_tty[message_id] = tmux_name
+    session_store.add_pending(tmux_name, message_id)
     reply_id = _reply(message_id, f"🚀 已启动 Claude Code\ntmux attach -t {tmux_name}", reply_in_thread=True)
     if reply_id:
-        _pending_reply_ids[tmux_name] = reply_id
+        session_store.update_pending_reply(tmux_name, reply_id)
     logger.info(f"Started Claude Code: tmux={tmux_name} cwd={cwd} prompt={prompt[:50]}")
 
 
@@ -407,7 +403,7 @@ def _on_message(data: P2ImMessageReceiveV1):
     else:
         # Check pending Feishu-initiated sessions (hook not yet received)
         _root = root_id or parent_id
-        _tmux = _pending_msg_to_tty.get(_root) if _root else None
+        _tmux = session_store.resolve_pending_tty(_root) if _root else None
         if _tmux:
             error = validate_target(_tmux)
             if error:
@@ -475,10 +471,8 @@ async def receive_hook(request: Request):
             return {"ok": True, "msg_id": msg_id, "thread": session.root_msg_id}
     else:
         # New session: check if Feishu-initiated (pending root exists)
-        pending_root = _pending_roots.pop(tty, None)
+        pending_root, reply_id = session_store.pop_pending(tty)
         if pending_root:
-            _pending_msg_to_tty.pop(pending_root, None)
-            reply_id = _pending_reply_ids.pop(tty, None)
             # Feishu-initiated: reuse existing thread
             root_id = pending_root
             if session_id:
